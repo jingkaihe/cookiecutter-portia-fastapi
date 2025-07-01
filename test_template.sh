@@ -77,9 +77,9 @@ echo -e "\n4. Checking dependencies..."
 if command -v uv &> /dev/null; then
     echo "✓ uv is installed"
 
-    # Install dependencies
+    # Install dependencies including dev dependencies for testing
     echo "Installing dependencies..."
-    uv sync --no-group dev
+    uv sync --group dev
 
     # Test 5: Run basic tests
     echo -e "\n5. Running basic import test..."
@@ -87,18 +87,26 @@ if command -v uv &> /dev/null; then
 
     # Test 6: Run unit tests
     echo -e "\n6. Running unit tests..."
-    uv run pytest tests/test_api.py -v || echo "⚠ Tests require API keys to pass fully"
+    uv run pytest tests/ -v -m "not integration" || echo "⚠ Some tests may require real API keys"
+
+    # Test 7: Run linting
+    echo -e "\n7. Running code quality checks..."
+    uv run ruff check . && echo "✓ Linting passed"
+
+    # Test 8: Run type checking
+    echo -e "\n8. Running type checking..."
+    uv run pyright && echo "✓ Type checking passed" || echo "⚠ Type checking warnings"
 
 else
     echo "⚠ uv not installed, skipping dependency tests"
 fi
 
-# Test 7: Test Makefile targets
-echo -e "\n7. Testing Makefile..."
+# Test 9: Test Makefile targets
+echo -e "\n9. Testing Makefile..."
 make help > /dev/null && echo "✓ Makefile works"
 
-# Test 8: Generate project without example tools
-echo -e "\n8. Testing generation without example tools..."
+# Test 10: Generate project without example tools
+echo -e "\n10. Testing generation without example tools..."
 cd "$TEMP_DIR"
 uvx cookiecutter "$TEMPLATE_DIR" --no-input \
     -o "$TEMP_DIR" \

@@ -23,9 +23,68 @@ logger.remove()
 logger.add(sys.stderr, level="INFO", format="{time:HH:mm:ss} | {level} | {message}")
 
 
+def _test_basic_endpoints(client: httpx.Client) -> dict[str, Any]:
+    """Test basic API endpoints and return status info."""
+    # Test root endpoint
+    logger.info("Testing root endpoint...")
+    response = client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    logger.success(f"Root endpoint: {data['message']}")
+
+    # Test health endpoint
+    logger.info("Testing health endpoint...")
+    response = client.get("/health")
+    assert response.status_code == 200
+    logger.success("Health check passed")
+
+    # Test status endpoint
+    logger.info("Testing API status endpoint...")
+    response = client.get("/api/v1/")
+    assert response.status_code == 200
+    status = response.json()
+    logger.success(f"API Status: {status['status']}")
+    logger.info(f"Available tools ({len(status['available_tools'])}): {', '.join(status['available_tools'])}")
+
+    # Test tools endpoint
+    logger.info("Testing tools endpoint...")
+    response = client.get("/api/v1/tools")
+    assert response.status_code == 200
+    tools = response.json()
+    logger.info(f"Found {len(tools)} tools:")
+    for tool in tools:
+        logger.info(f"  - {tool['id']}: {tool['description']}")
+
+    return status
+
+
+def _test_example_tools(client: httpx.Client, available_tools: list[str]) -> None:
+    """Test example tools if available."""
+    tool_tests = [
+        ("roll_dice", "Roll a 20-sided die", "dice rolling"),
+        ("reverse_text", "Reverse the text 'Hello World'", "text manipulation"),
+        ("add_numbers", "Add 42.5 and 17.3", "math operation"),
+        ("uppercase_text", "Convert 'hello world' to uppercase with excitement", "uppercase conversion"),
+        ("count_letters", "Count the letters in 'The quick brown fox jumps over the lazy dog'", "text analysis"),
+    ]
+
+    for tool_id, query, description in tool_tests:
+        if tool_id in available_tools:
+            logger.info(f"\nTesting {description}...")
+            test_query(query, client, tools=[tool_id])
+
+    # Test multiple tools
+    if "get_random_fact" in available_tools and "count_letters" in available_tools:
+        logger.info("\nTesting multiple tools...")
+        test_query(
+            "Get a random fact and then count how many letters it has",
+            client,
+            tools=["get_random_fact", "count_letters"]
+        )
+
+
 def test_endpoints(base_url: str = "http://localhost:8000") -> None:
     """Test all API endpoints."""
-
     # Check if we have an API key
     if not os.getenv("OPENAI_API_KEY"):
         logger.error("OPENAI_API_KEY not set in environment")
@@ -35,95 +94,12 @@ def test_endpoints(base_url: str = "http://localhost:8000") -> None:
     client = httpx.Client(base_url=base_url, timeout=30.0)
 
     try:
-        # Test root endpoint
-        logger.info("Testing root endpoint...")
-        response = client.get("/")
-        assert response.status_code == 200
-        data = response.json()
-        logger.success(f"Root endpoint: {data['message']}")
-
-        # Test health endpoint
-        logger.info("Testing health endpoint...")
-        response = client.get("/health")
-        assert response.status_code == 200
-        logger.success("Health check passed")
-
-        # Test status endpoint
-        logger.info("Testing API status endpoint...")
-        response = client.get("/api/v1/")
-        assert response.status_code == 200
-        status = response.json()
-        logger.success(f"API Status: {status['status']}")
-        logger.info(f"Available tools ({len(status['available_tools'])}): {', '.join(status['available_tools'])}")
-
-        # Test tools endpoint
-        logger.info("Testing tools endpoint...")
-        response = client.get("/api/v1/tools")
-        assert response.status_code == 200
-        tools = response.json()
-        logger.info(f"Found {len(tools)} tools:")
-        for tool in tools:
-            logger.info(f"  - {tool['id']}: {tool['description']}")
-
-        # Check if we have example tools
-        has_example_tools = len(status['available_tools']) > 0
+        status = _test_basic_endpoints(client)
         
-        if has_example_tools:
+        # Check if we have example tools
+        if status['available_tools']:
             logger.info("\nExample tools detected. Running tool-specific tests...")
-            
-            # Test with specific tools
-            if "roll_dice" in status['available_tools']:
-                logger.info("\nTesting dice rolling...")
-                test_query(
-                    "Roll a 20-sided die",
-                    client,
-                    tools=["roll_dice"]
-                )
-            
-            # Test text manipulation
-            if "reverse_text" in status['available_tools']:
-                logger.info("\nTesting text manipulation...")
-                test_query(
-                    "Reverse the text 'Hello World'",
-                    client,
-                    tools=["reverse_text"]
-                )
-            
-            # Test math operation
-            if "add_numbers" in status['available_tools']:
-                logger.info("\nTesting math operation...")
-                test_query(
-                    "Add 42.5 and 17.3",
-                    client,
-                    tools=["add_numbers"]
-                )
-            
-            # Test uppercase with exclamation
-            if "uppercase_text" in status['available_tools']:
-                logger.info("\nTesting uppercase conversion...")
-                test_query(
-                    "Convert 'hello world' to uppercase with excitement",
-                    client,
-                    tools=["uppercase_text"]
-                )
-            
-            # Test text analysis
-            if "count_letters" in status['available_tools']:
-                logger.info("\nTesting text analysis...")
-                test_query(
-                    "Count the letters in 'The quick brown fox jumps over the lazy dog'",
-                    client,
-                    tools=["count_letters"]
-                )
-            
-            # Test multiple tools
-            if "get_random_fact" in status['available_tools'] and "count_letters" in status['available_tools']:
-                logger.info("\nTesting multiple tools...")
-                test_query(
-                    "Get a random fact and then count how many letters it has",
-                    client,
-                    tools=["get_random_fact", "count_letters"]
-                )
+            _test_example_tools(client, status['available_tools'])
         else:
             logger.warning("No example tools found. Testing with LLM-only queries...")
         

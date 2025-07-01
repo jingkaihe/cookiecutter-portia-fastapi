@@ -4,22 +4,22 @@
 from portia import ToolRegistry
 
 from .example_tools import (
+    add_numbers,
+    count_letters,
+    get_random_fact,
     reverse_text,
     roll_dice,
-    add_numbers,
-    get_random_fact,
     uppercase_text,
-    count_letters,
 )
 
 # Create a registry with all example tools
 custom_tools = ToolRegistry([
+    add_numbers(),
+    count_letters(),
+    get_random_fact(),
     reverse_text(),
     roll_dice(),
-    add_numbers(),
-    get_random_fact(),
     uppercase_text(),
-    count_letters(),
 ])
 
 __all__ = ["custom_tools"]

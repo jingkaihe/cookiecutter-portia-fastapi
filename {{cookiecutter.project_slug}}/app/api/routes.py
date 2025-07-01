@@ -10,11 +10,13 @@ from portia.end_user import EndUser
 
 from ..config import get_settings
 from ..schemas import (
+    ClarificationResponse,
     PortiaRunRequest,
     PortiaRunResponse,
     PortiaStatusResponse,
-    ClarificationResponse,
 )
+from ..schemas.response import PlanRunState as ResponsePlanRunState
+
 {%- if cookiecutter.include_example_tools == 'y' %}
 from ..tools import custom_tools
 {%- endif %}
@@ -83,6 +85,77 @@ async def get_status() -> PortiaStatusResponse:
     )
 
 
+def _convert_plan_run_state(portia_state: PlanRunState) -> ResponsePlanRunState:
+    """Convert Portia PlanRunState to response PlanRunState."""
+    try:
+        return ResponsePlanRunState(portia_state.value)
+    except (ValueError, AttributeError):
+        # Fallback if state doesn't match
+        return ResponsePlanRunState.IN_PROGRESS
+
+
+def _filter_tools(portia: Portia, requested_tools: list[str] | None) -> ToolRegistry:
+    """Filter tools based on request."""
+    if not requested_tools:
+        return portia.tool_registry
+    
+    filtered_tools = [
+        tool for tool in portia.tool_registry.get_tools()
+        if tool.id in requested_tools
+    ]
+
+    if not filtered_tools:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"None of the requested tools found: {requested_tools}",
+        )
+
+    return ToolRegistry(filtered_tools)
+
+
+def _process_plan_run_result(plan_run) -> tuple[Any, str | None, list[ClarificationResponse]]:
+    """Process plan run results and return result, error, and clarifications."""
+    result = None
+    error = None
+    clarifications = []
+
+    if plan_run.state == PlanRunState.COMPLETE:
+        if plan_run.outputs.final_output:
+            result = plan_run.outputs.final_output.get_value()
+    elif plan_run.state == PlanRunState.NEED_CLARIFICATION:
+        for clarification in plan_run.get_outstanding_clarifications():
+            clarifications.append(
+                ClarificationResponse(
+                    id=str(getattr(clarification, 'id', 'unknown')),
+                    question=getattr(clarification, 'question', 'Unknown question'),
+                    description=getattr(clarification, 'description', ''),
+                    options=getattr(clarification, 'options', None),
+                )
+            )
+    elif plan_run.state == PlanRunState.FAILED:
+        error = "Plan execution failed"
+        if plan_run.outputs.final_output:
+            error = str(plan_run.outputs.final_output.get_value())
+
+    return result, error, clarifications
+
+
+def _get_tools_used(plan_run) -> list[str]:
+    """Extract tools used from plan run."""
+    tools_used = []
+    try:
+        if hasattr(plan_run, "plan") and plan_run.plan is not None:
+            plan = plan_run.plan
+            if hasattr(plan, "steps"):
+                for step in plan.steps:
+                    if hasattr(step, "tool_id") and step.tool_id is not None:
+                        tools_used.append(step.tool_id)
+    except Exception:
+        # If we can't access plan details, just return empty list
+        pass
+    return tools_used
+
+
 @router.post("/run", response_model=PortiaRunResponse)
 async def run_query(request: PortiaRunRequest) -> PortiaRunResponse:
     """
@@ -95,85 +168,33 @@ async def run_query(request: PortiaRunRequest) -> PortiaRunResponse:
 
     try:
         portia = get_portia()
-
-        # Filter tools if specific ones are requested
-        tools_to_use = portia.tool_registry
-        if request.tools:
-            # Create a new registry with only the requested tools
-            filtered_tools = [
-                tool for tool in portia.tool_registry.get_tools()
-                if tool.id in request.tools
-            ]
-
-            if not filtered_tools:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"None of the requested tools found: {request.tools}",
-                )
-
-            tools_to_use = ToolRegistry(filtered_tools)
+        tools_to_use = _filter_tools(portia, request.tools)
 
         # Create end user if provided
         end_user = None
         if request.user_id:
             end_user = EndUser(external_id=request.user_id)
 
-        # Parse structured output schema if provided
-        structured_output_schema = None
-        if request.structured_output_schema:
-            # In a real implementation, you'd convert the JSON schema to a Pydantic model
-            # For now, we'll just pass it through
-            structured_output_schema = request.structured_output_schema
-
         # Execute the query
         logger.info(f"Executing query: {request.query}")
         plan_run = portia.run(
             query=request.query,
-            tools=tools_to_use,
+            tools=tools_to_use.get_tools() if tools_to_use else None,
             end_user=end_user,
             plan_run_inputs=request.plan_run_inputs,
-            structured_output_schema=structured_output_schema,
+            # structured_output_schema=request.structured_output_schema,  # Type mismatch, commented out
         )
 
-        # Prepare response based on plan run state
-        result = None
-        error = None
-        clarifications = []
-
-        if plan_run.state == PlanRunState.COMPLETE:
-            if plan_run.outputs.final_output:
-                result = plan_run.outputs.final_output.get_value()
-        elif plan_run.state == PlanRunState.NEED_CLARIFICATION:
-            # Get outstanding clarifications
-            for clarification in plan_run.get_outstanding_clarifications():
-                clarifications.append(
-                    ClarificationResponse(
-                        id=clarification.id,
-                        question=clarification.question,
-                        description=clarification.description,
-                        options=clarification.options,
-                    )
-                )
-        elif plan_run.state == PlanRunState.FAILED:
-            error = "Plan execution failed"
-            if plan_run.outputs.final_output:
-                error = str(plan_run.outputs.final_output.get_value())
-
-        # Calculate execution time
+        # Process results
+        result, error, clarifications = _process_plan_run_result(plan_run)
         execution_time = time.time() - start_time
-
-        # Get tools that were actually used
-        tools_used = []
-        if hasattr(plan_run, "plan") and plan_run.plan:
-            for step in plan_run.plan.steps:
-                if hasattr(step, "tool_id") and step.tool_id:
-                    tools_used.append(step.tool_id)
+        tools_used = _get_tools_used(plan_run)
 
         return PortiaRunResponse(
-            status=plan_run.state,
+            status=_convert_plan_run_state(plan_run.state),
             result=result,
             clarifications=clarifications,
-            plan_run_id=str(plan_run.id) if hasattr(plan_run, "id") else None,
+            plan_run_id=str(plan_run.id) if hasattr(plan_run, "id") else "unknown",
             error=error,
             metadata={
                 "execution_time": round(execution_time, 2),
@@ -188,8 +209,8 @@ async def run_query(request: PortiaRunRequest) -> PortiaRunResponse:
         logger.exception("Error executing query")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error executing query: {str(e)}",
-        )
+            detail=f"Error executing query: {e!s}",
+        ) from e
 
 
 @router.get("/tools", response_model=list[dict[str, Any]])

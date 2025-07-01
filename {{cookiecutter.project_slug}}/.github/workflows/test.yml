@@ -1,0 +1,78 @@
+name: Test {{ cookiecutter.project_name }}
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["{{ cookiecutter.python_version }}", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ "{{ matrix.python-version }}" }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ "{{ matrix.python-version }}" }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv sync --group dev
+
+    - name: Run linting
+      run: |
+        uv run ruff check .
+
+    - name: Run type checking
+      run: |
+        uv run pyright
+
+    - name: Run unit tests
+      run: |
+        uv run pytest tests/ -v -m "not integration" --cov --cov-report=xml
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
+  integration-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "{{ cookiecutter.python_version }}"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv sync --group dev
+
+    - name: Run integration tests
+      env:
+        OPENAI_API_KEY: ${{ "{{ secrets.OPENAI_API_KEY }}" }}
+      run: |
+        uv run pytest tests/ -v -m integration
+      continue-on-error: true  # Integration tests may fail if API key is not available

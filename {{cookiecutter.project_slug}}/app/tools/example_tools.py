@@ -11,7 +11,7 @@ Each tool is kept under 15 lines to focus on core concepts:
 import random
 from typing import Annotated
 
-from portia import tool, ToolHardError
+from portia import ToolHardError, tool
 
 
 @tool

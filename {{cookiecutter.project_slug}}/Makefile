@@ -1,5 +1,5 @@
 # Makefile for {{ cookiecutter.project_name }}
-.PHONY: help install install-dev run test lint format typecheck clean docker-build docker-run
+.PHONY: help install install-dev run test test-cov test-unit test-integration lint lint-fix format typecheck clean docker-build docker-run
 
 # Default target
 help:
@@ -7,7 +7,10 @@ help:
 	@echo "  make install      Install production dependencies"
 	@echo "  make install-dev  Install development dependencies"
 	@echo "  make run          Run the FastAPI application"
-	@echo "  make test         Run tests"
+	@echo "  make test         Run all tests"
+	@echo "  make test-cov     Run tests with coverage report"
+	@echo "  make test-unit    Run unit tests only"
+	@echo "  make test-integration Run integration tests only"
 	@echo "  make lint         Run linter (ruff check)"
 	@echo "  make format       Format code (ruff format)"
 	@echo "  make typecheck    Run type checker (pyright)"
@@ -36,6 +39,14 @@ test:
 # Run tests with coverage
 test-cov:
 	uv run pytest --cov --cov-report=html
+
+# Run unit tests only
+test-unit:
+	uv run pytest -m "not integration"
+
+# Run integration tests only
+test-integration:
+	uv run pytest -m integration
 
 # Run linter
 lint:

@@ -86,6 +86,46 @@ Generated from the Portia FastAPI cookiecutter template.
    ```
 {%- endif %}
 
+## Testing
+
+This project includes comprehensive unit tests and integration tests.
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run unit tests only (no API key required)
+make test-unit
+
+# Run tests with coverage
+make test-cov
+
+# Run integration tests (requires API key)
+make test-integration
+```
+
+### Test Structure
+
+- `tests/test_api.py` - API endpoint tests
+- `tests/test_config.py` - Configuration tests  
+- `tests/test_schemas.py` - Pydantic schema tests
+- `tests/conftest.py` - Shared test fixtures
+
+### Test Categories
+
+- **Unit Tests**: Fast tests that don't require external APIs
+- **Integration Tests**: Tests that require real LLM API keys (marked with `@pytest.mark.integration`)
+
+### Coverage
+
+Generate coverage reports:
+```bash
+make test-cov
+# Open htmlcov/index.html to view detailed coverage
+```
+
 ## API Endpoints
 
 ### `GET /`

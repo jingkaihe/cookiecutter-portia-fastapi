@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from portia import LogLevel, StorageClass
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     app_name: str = Field(default="{{ cookiecutter.project_name }}", description="Application name")
     app_version: str = Field(default="{{ cookiecutter.version }}", description="Application version")
     debug: bool = Field(default=False, description="Debug mode")
-    log_level: str = Field(default="info", description="Logging level")
+    log_level: str = Field(default="INFO", description="Logging level")
 
     # Server Configuration
     host: str = Field(default="0.0.0.0", description="Host to bind the server")
@@ -73,6 +73,23 @@ class Settings(BaseSettings):
         elif self.portia_storage_class == StorageClass.DISK:
             return StorageClass.DISK
         return StorageClass.MEMORY
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, v: int) -> int:
+        """Validate port number is in valid range."""
+        if not (1 <= v <= 65535):
+            raise ValueError("Port must be between 1 and 65535")
+        return v
+
+    @field_validator("log_level")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        """Validate log level is valid."""
+        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if v.upper() not in valid_levels:
+            raise ValueError(f"Log level must be one of: {', '.join(valid_levels)}")
+        return v.upper()
 
 
 @lru_cache

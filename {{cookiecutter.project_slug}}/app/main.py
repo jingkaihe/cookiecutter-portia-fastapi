@@ -1,7 +1,7 @@
 """Main FastAPI application module."""
 
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +13,7 @@ from .logging_config import setup_logging
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events."""
     # Startup
     setup_logging()
