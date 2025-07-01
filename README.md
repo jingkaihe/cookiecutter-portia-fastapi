@@ -36,10 +36,13 @@ uv tool install cookiecutter
 ### Generate Your Project
 
 ```bash
-# From the examples directory
-cookiecutter portia-fastapi-cookiecutter/
+# Directly from GitHub (recommended)
+uvx cookiecutter gh:jingkaihe/cookiecutter-portia-fastapi
 
-# Or directly from this directory
+# Or using cookiecutter with GitHub
+cookiecutter https://github.com/jingkaihe/cookiecutter-portia-fastapi
+
+# Or if you've cloned this repository locally
 cookiecutter .
 ```
 
