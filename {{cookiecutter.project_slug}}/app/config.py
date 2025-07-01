@@ -2,10 +2,9 @@
 
 from functools import lru_cache
 
+from portia import LogLevel, StorageClass
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from portia import LogLevel, StorageClass
 
 
 class Settings(BaseSettings):

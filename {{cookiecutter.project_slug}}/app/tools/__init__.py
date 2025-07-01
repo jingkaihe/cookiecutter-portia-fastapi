@@ -14,12 +14,12 @@ from .example_tools import (
 
 # Create a registry with all example tools
 custom_tools = ToolRegistry([
-    add_numbers(),
-    count_letters(),
-    get_random_fact(),
-    reverse_text(),
-    roll_dice(),
-    uppercase_text(),
+    add_numbers(),  # type: ignore[call-arg]
+    count_letters(),  # type: ignore[call-arg]
+    get_random_fact(),  # type: ignore[call-arg]
+    reverse_text(),  # type: ignore[call-arg]
+    roll_dice(),  # type: ignore[call-arg]
+    uppercase_text(),  # type: ignore[call-arg]
 ])
 
 __all__ = ["custom_tools"]

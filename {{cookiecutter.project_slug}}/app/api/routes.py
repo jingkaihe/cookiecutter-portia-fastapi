@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 from loguru import logger
-from portia import Config, Portia, PlanRunState, ToolRegistry
+from portia import Config, PlanRunState, Portia, ToolRegistry
 from portia.end_user import EndUser
 
 from ..config import get_settings
@@ -16,7 +16,6 @@ from ..schemas import (
     PortiaStatusResponse,
 )
 from ..schemas.response import PlanRunState as ResponsePlanRunState
-
 {%- if cookiecutter.include_example_tools == 'y' %}
 from ..tools import custom_tools
 {%- endif %}
@@ -213,14 +212,14 @@ async def run_query(request: PortiaRunRequest) -> PortiaRunResponse:
         ) from e
 
 
-@router.get("/tools", response_model=list[dict[str, Any]])
+@router.get("/tools")
 async def get_tools() -> list[dict[str, Any]]:
     """Get detailed information about available tools."""
     portia = get_portia()
 
     tools_info = []
     for tool in portia.tool_registry.get_tools():
-        tool_info = {
+        tool_info: dict[str, Any] = {
             "id": tool.id,
             "name": tool.name,
             "description": tool.description,

@@ -17,7 +17,7 @@ class TestPortiaRunRequest:
     def test_valid_request_minimal(self):
         """Test valid minimal request."""
         data = {"query": "What is 2+2?"}
-        request = PortiaRunRequest(**data)
+        request = PortiaRunRequest(**data)  # type: ignore[arg-type]
         assert request.query == "What is 2+2?"
         assert request.tools is None
         assert request.user_id is None
@@ -43,23 +43,23 @@ class TestPortiaRunRequest:
     def test_invalid_request_missing_query(self):
         """Test invalid request missing query."""
         with pytest.raises(ValidationError) as exc_info:
-            PortiaRunRequest(tools=["some_tool"])
+            PortiaRunRequest(tools=["some_tool"])  # type: ignore[call-arg]
         
         assert "query" in str(exc_info.value)
 
     def test_invalid_request_empty_query(self):
         """Test request with empty query."""
         data = {"query": ""}
-        request = PortiaRunRequest(**data)
+        request = PortiaRunRequest(**data)  # type: ignore[arg-type]
         assert request.query == ""  # Empty string is valid
 
     def test_invalid_request_wrong_types(self):
         """Test request with wrong field types."""
         with pytest.raises(ValidationError):
-            PortiaRunRequest(query=123)  # Should be string
+            PortiaRunRequest(query=123)  # type: ignore[arg-type]  # Should be string
         
         with pytest.raises(ValidationError):
-            PortiaRunRequest(query="test", tools="not_a_list")  # Should be list
+            PortiaRunRequest(query="test", tools="not_a_list")  # type: ignore[arg-type]  # Should be list
 
 
 class TestPortiaStatusResponse:
@@ -157,7 +157,7 @@ class TestPortiaRunResponse:
     def test_invalid_run_response_missing_required(self):
         """Test invalid run response missing required fields."""
         with pytest.raises(ValidationError):
-            PortiaRunResponse(result="test")  # Missing status
+            PortiaRunResponse(result="test")  # type: ignore[call-arg]  # Missing status
 
 
 class TestClarificationResponse:
@@ -191,4 +191,4 @@ class TestClarificationResponse:
     def test_invalid_clarification_missing_required(self):
         """Test invalid clarification missing required fields."""
         with pytest.raises(ValidationError):
-            ClarificationResponse(question="Test?")  # Missing id
+            ClarificationResponse(question="Test?")  # type: ignore[call-arg]  # Missing id

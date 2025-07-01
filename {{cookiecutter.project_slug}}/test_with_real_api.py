@@ -137,7 +137,7 @@ def test_query(
     """Test a single query."""
     logger.info(f"Query: {query}")
 
-    payload = {"query": query}
+    payload: dict[str, Any] = {"query": query}
     if tools:
         payload["tools"] = tools
     if user_id:

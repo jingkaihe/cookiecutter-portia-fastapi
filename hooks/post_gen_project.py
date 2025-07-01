@@ -27,45 +27,8 @@ for path in REMOVE_PATHS:
     elif os.path.isdir(path):
         shutil.rmtree(path)
 
-# Create empty test directory
-os.makedirs("tests", exist_ok=True)
-with open("tests/__init__.py", "w") as f:
-    f.write('"""Tests for {{ cookiecutter.project_name }}."""\n')
-
-# Create a simple test file
-with open("tests/test_api.py", "w") as f:
-    f.write('''"""Basic API tests for {{ cookiecutter.project_name }}."""
-
-import pytest
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-client = TestClient(app)
-
-
-def test_root():
-    """Test root endpoint."""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "message" in response.json()
-
-
-def test_health():
-    """Test health check endpoint."""
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
-
-
-def test_api_status():
-    """Test API status endpoint."""
-    response = client.get("/api/v1/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert "available_tools" in data
-''')
+# Note: Test files are already included in the template
+# No need to create them here as it would overwrite the comprehensive test suite
 
 # Create .dockerignore if Docker is enabled
 if "{{ cookiecutter.use_docker }}" == "y":
