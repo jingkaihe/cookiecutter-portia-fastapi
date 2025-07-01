@@ -173,7 +173,7 @@ async def run_query(request: PortiaRunRequest) -> PortiaRunResponse:
             status=plan_run.state,
             result=result,
             clarifications=clarifications,
-            plan_run_id=plan_run.id if hasattr(plan_run, "id") else None,
+            plan_run_id=str(plan_run.id) if hasattr(plan_run, "id") else None,
             error=error,
             metadata={
                 "execution_time": round(execution_time, 2),
