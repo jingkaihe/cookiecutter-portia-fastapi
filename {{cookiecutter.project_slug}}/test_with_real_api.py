@@ -1,4 +1,14 @@
-"""Test script to verify the FastAPI Portia integration with real API calls."""
+"""Test script to verify the FastAPI Portia integration with real API calls.
+
+This script tests all API endpoints and example tools with actual Portia/LLM interactions.
+It requires:
+- The API to be running (default: http://localhost:8000)
+- A valid OpenAI API key (or other LLM provider) set in the environment
+
+Usage:
+    python test_with_real_api.py
+    python test_with_real_api.py --url http://your-api-url:port
+"""
 
 import os
 import sys
@@ -44,40 +54,73 @@ def test_endpoints(base_url: str = "http://localhost:8000") -> None:
         assert response.status_code == 200
         status = response.json()
         logger.success(f"API Status: {status['status']}")
-        logger.info(f"Available tools: {', '.join(status['available_tools'])}")
+        logger.info(f"Available tools ({len(status['available_tools'])}): {', '.join(status['available_tools'])}")
 
         # Test tools endpoint
         logger.info("Testing tools endpoint...")
         response = client.get("/api/v1/tools")
         assert response.status_code == 200
         tools = response.json()
+        logger.info(f"Found {len(tools)} tools:")
         for tool in tools:
             logger.info(f"  - {tool['id']}: {tool['description']}")
 
         # Test basic query
         logger.info("\nTesting basic query...")
-        test_query("Tell me a programming joke", client)
+        test_query("Tell me a random fact", client)
 
         # Test with specific tools
         logger.info("\nTesting with specific tools...")
         test_query(
-            "Roll 2 six-sided dice",
+            "Roll a 20-sided die",
             client,
             tools=["roll_dice"]
+        )
+
+        # Test text manipulation
+        logger.info("\nTesting text manipulation...")
+        test_query(
+            "Reverse the text 'Hello World'",
+            client,
+            tools=["reverse_text"]
+        )
+
+        # Test math operation
+        logger.info("\nTesting math operation...")
+        test_query(
+            "Add 42.5 and 17.3",
+            client,
+            tools=["add_numbers"]
+        )
+
+        # Test uppercase with exclamation
+        logger.info("\nTesting uppercase conversion...")
+        test_query(
+            "Convert 'hello world' to uppercase with excitement",
+            client,
+            tools=["uppercase_text"]
+        )
+
+        # Test text analysis
+        logger.info("\nTesting text analysis...")
+        test_query(
+            "Count the letters in 'The quick brown fox jumps over the lazy dog'",
+            client,
+            tools=["count_letters"]
         )
 
         # Test multiple tools
         logger.info("\nTesting multiple tools...")
         test_query(
-            "Roll some dice and then tell me my fortune",
+            "Get a random fact and then count how many letters it has",
             client,
-            tools=["roll_dice", "tell_fortune"]
+            tools=["get_random_fact", "count_letters"]
         )
 
         # Test with user ID
         logger.info("\nTesting with user ID...")
         test_query(
-            "Generate a joke about food",
+            "Reverse my name: John Doe",
             client,
             user_id="test_user_123"
         )
