@@ -1,0 +1,19 @@
+{
+  "full_name": "Your Name",
+  "email": "you@example.com",
+  "project_name": "Portia FastAPI Service",
+  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
+  "project_short_description": "A FastAPI service powered by Portia SDK for agentic AI workflows",
+  "version": "0.1.0",
+  "python_version": "3.11",
+  "use_docker": "y",
+  "port": "8000",
+  "include_example_tools": "y",
+  "portia_storage_class": ["MEMORY", "DISK", "CLOUD"],
+  "portia_log_level": ["INFO", "DEBUG", "WARNING", "ERROR"],
+  "_copy_without_render": [
+    "*.html",
+    "*.css",
+    "*.js"
+  ]
+}

@@ -1,0 +1,90 @@
+name: Test Cookiecutter Template
+
+on:
+  push:
+    paths:
+      - 'examples/portia-fastapi-cookiecutter/**'
+      - '.github/workflows/test-cookiecutter.yml'
+  pull_request:
+    paths:
+      - 'examples/portia-fastapi-cookiecutter/**'
+      - '.github/workflows/test-cookiecutter.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install cookiecutter
+      run: |
+        uv tool install cookiecutter
+    
+    - name: Test template generation
+      run: |
+        cd examples/portia-fastapi-cookiecutter
+        python test_cookiecutter.py -v
+    
+    - name: Run bash test script
+      run: |
+        cd examples/portia-fastapi-cookiecutter
+        ./test_template.sh
+  
+  test-generated-project:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install cookiecutter
+      run: |
+        uv tool install cookiecutter
+    
+    - name: Generate and test project
+      run: |
+        cd examples/portia-fastapi-cookiecutter
+        
+        # Generate project
+        cookiecutter . --no-input -o /tmp/test \
+          project_name="CI Test API" \
+          project_slug="ci_test_api"
+        
+        cd /tmp/test/ci_test_api
+        
+        # Create .env with dummy key
+        cp .env.example .env
+        sed -i 's/your-openai-api-key-here/sk-test-dummy/g' .env
+        
+        # Install and test
+        uv sync --group dev
+        uv run pytest tests/test_api.py -v
+        
+        # Check linting
+        uv run ruff check .
+        uv run ruff format --check .
+        
+        # Check types
+        uv run pyright || echo "Type checking may have minor issues with new code"

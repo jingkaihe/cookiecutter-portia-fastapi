@@ -1,0 +1,4 @@
+# Requirements for running integration tests
+pytest>=8.3.3
+httpx>=0.28.1
+cookiecutter>=2.6.0
